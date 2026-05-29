@@ -158,9 +158,6 @@
       <div class="app-sub">5. osztályos mértékegységek</div>
     </div>
     <div id="cat-list" style="display:flex;flex-direction:column;gap:8px"></div>
-    <div class="info-row">
-      20 kérdés &nbsp;·&nbsp; minden 4. dupla ugrás &nbsp;·&nbsp; felváltva kis→nagy és nagy→kis &nbsp;·&nbsp; ~15% tizedes válasz
-    </div>
     <button class="btn" id="start-btn" onclick="startQuiz()">Kezdjük! &rarr;</button>
   </div>
 
@@ -206,21 +203,21 @@ const UNITS = {
   "Terület":   { "mm²":1, "cm²":100, "dm²":10000, "m²":1000000, ha:10000000000, "km²":1000000000000 },
   "Térfogat":  { ml:1, cl:10, dl:100, l:1000, "cm³":1, "dm³":1000, "m³":1000000 },
   "Tömeg":     { mg:1, g:1000, dkg:10000, kg:1000000, t:1000000000 },
-  "Idő":       { s:1, perc:60, "óra":3600, nap:86400 },
+  "Idő":       { mp:1, perc:60, "óra":3600, nap:86400 },
 };
 const SINGLE = {
   "Hosszúság": [["mm","cm"],["cm","dm"],["dm","m"],["m","km"]],
   "Terület":   [["mm²","cm²"],["cm²","dm²"],["dm²","m²"],["m²","ha"],["ha","km²"]],
   "Térfogat":  [["ml","dl"],["dl","l"],["l","dm³"],["dm³","m³"]],
   "Tömeg":     [["mg","g"],["g","dkg"],["dkg","kg"],["kg","t"]],
-  "Idő":       [["s","perc"],["perc","óra"],["óra","nap"]],
+  "Idő":       [["mp","perc"],["perc","óra"],["óra","nap"]],
 };
 const DOUBLE = {
   "Hosszúság": [["mm","dm"],["cm","m"],["dm","km"]],
   "Terület":   [["mm²","dm²"],["cm²","m²"],["dm²","ha"],["m²","km²"]],
   "Térfogat":  [["ml","l"],["dl","dm³"],["l","m³"]],
   "Tömeg":     [["mg","dkg"],["g","kg"],["dkg","t"]],
-  "Idő":       [["s","óra"],["perc","nap"]],
+  "Idő":       [["mp","óra"],["perc","nap"]],
 };
 
 // ── Number helpers ────────────────────────────────────────────────────────
@@ -245,7 +242,7 @@ function shuffle(a) {
 }
 
 // Mixed time source display: 1.5 óra → "1 óra 30 perc"
-const TIME_NEXT = { nap:["óra",24], "óra":["perc",60], perc:["s",60] };
+const TIME_NEXT = { nap:["óra",24], "óra":["perc",60], perc:["mp",60] };
 function formatTimeSrc(v, unit) {
   const whole = Math.floor(v);
   const frac  = Math.round((v - whole) * 1e6) / 1e6;
@@ -336,8 +333,8 @@ function makeExercise(cats, dj, goUp, wantDecimal) {
 
 function buildQuiz(cats) {
   return Array.from({length:20}, (_,i) => {
-    const dj          = (i+1)%4===0;
-    const goUp        = (i+1)%2===1;
+    const dj          = Math.random() < 0.15;
+    const goUp        = Math.random() < 0.5;
     const wantDecimal = Math.random() < 0.15;
     return makeExercise(cats, dj, goUp, wantDecimal);
   });
@@ -464,5 +461,7 @@ if (window.visualViewport) {
 // ── Init ──────────────────────────────────────────────────────────────────
 renderCats();
 </script>
+<script data-goatcounter="https://huvagoc.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
