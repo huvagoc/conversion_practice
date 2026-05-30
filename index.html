@@ -42,7 +42,7 @@
   .screen { display: none; flex-direction: column; gap: .85rem; }
   .screen.active { display: flex; }
 
-  /* Settings */
+  /* ── Settings ── */
   .app-title { font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
   .app-sub   { font-size: 14px; color: var(--muted); margin-top: .2rem; margin-bottom: .4rem; }
 
@@ -57,9 +57,7 @@
   }
   .cat-btn.on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 500; }
 
-  .info-row { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-  /* Buttons */
+  /* ── Buttons ── */
   .btn {
     display: flex; align-items: center; justify-content: center;
     width: 100%; padding: 15px;
@@ -74,22 +72,27 @@
   .btn-row { display: flex; gap: 10px; }
   .btn-row .btn { flex: 1; }
 
-  /* Progress */
+  /* ── Progress ── */
   .progress-row { display: flex; align-items: center; gap: 10px; }
   .progress-bar  { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .35s ease; }
   .progress-label { font-size: 13px; color: var(--muted); min-width: 36px; text-align: right; }
 
-  /* Question card */
+  /* ── Question card ── */
   .q-card {
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: var(--radius); padding: 1.4rem 1.25rem; text-align: center;
   }
-  .q-source { font-size: 32px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; }
-  .q-arrow  { font-size: 18px; color: var(--muted); margin: .35rem 0; }
-  .q-target { font-size: 21px; color: var(--muted); }
+  /* Conversion: single large line */
+  .q-source      { font-size: 32px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; }
+  .q-arrow       { font-size: 18px; color: var(--muted); margin: .35rem 0; }
+  .q-target      { font-size: 21px; color: var(--muted); }
 
-  /* Input */
+  /* Geometry: two-line layout */
+  .geo-shape     { font-size: 20px; font-weight: 600; margin-bottom: .3rem; }
+  .geo-given     { font-size: 16px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Input ── */
   .input-row { display: flex; gap: 8px; }
   .answer-input {
     flex: 1; height: 52px; padding: 0 14px;
@@ -108,7 +111,7 @@
   }
   .ok-btn:active { opacity: .85; }
 
-  /* Feedback */
+  /* ── Feedback ── */
   .feedback {
     padding: 13px 16px; border-radius: var(--radius);
     font-size: 15px; font-weight: 500;
@@ -119,15 +122,17 @@
 
   .score-mini { font-size: 13px; color: var(--muted); text-align: center; }
 
-  /* Result */
+  /* ── Result ── */
   .result-center { text-align: center; padding: 1rem 0; }
   .result-medal  { font-size: 56px; margin-bottom: .75rem; }
   .result-score  { font-size: 28px; font-weight: 600; }
   .result-pct    { font-size: 16px; color: var(--muted); margin-top: .25rem; }
 
-  /* Keyboard-open compact mode */
+  /* ── Keyboard-open compact mode ── */
   body.kb .q-card        { padding: .6rem 1rem; }
   body.kb .q-source      { font-size: 24px; }
+  body.kb .geo-shape     { font-size: 17px; }
+  body.kb .geo-given     { font-size: 14px; }
   body.kb .q-arrow       { font-size: 14px; margin: .1rem 0; }
   body.kb .q-target      { font-size: 17px; }
   body.kb .answer-input  { height: 44px; font-size: 18px; }
@@ -145,6 +150,7 @@
       --err:      #f87171; --err-bg:   #2d0f0f; --err-bd:  #7f1d1d;
     }
     .ok-btn { background: #166534; }
+    .geo-given { color: var(--muted); }
   }
 </style>
 </head>
@@ -155,7 +161,7 @@
   <div class="screen active" id="screen-settings">
     <div>
       <div class="app-title">Átváltás-kvíz</div>
-      <div class="app-sub">5. osztályos mértékegységek</div>
+      <div class="app-sub">5. osztályos matematika</div>
     </div>
     <div id="cat-list" style="display:flex;flex-direction:column;gap:8px"></div>
     <button class="btn" id="start-btn" onclick="startQuiz()">Kezdjük! &rarr;</button>
@@ -167,9 +173,9 @@
       <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
       <div class="progress-label" id="prog-label">1/20</div>
     </div>
-    <div class="q-card">
-      <div class="q-source" id="q-source"></div>
-      <div class="q-arrow"  id="q-arrow"></div>
+    <div class="q-card" id="q-card">
+      <div id="q-source-area"></div>
+      <div class="q-arrow" id="q-arrow"></div>
       <div class="q-target" id="q-target"></div>
     </div>
     <div class="input-row" id="input-row">
@@ -197,14 +203,19 @@
 
 </div>
 <script>
-// ── Unit data ─────────────────────────────────────────────────────────────
-const UNITS = {
+// ═══════════════════════════════════════════════════════
+//  CONVERSION DATA
+// ═══════════════════════════════════════════════════════
+
+const CONV_UNITS = {
   "Hosszúság": { mm:1, cm:10, dm:100, m:1000, km:1000000 },
   "Terület":   { "mm²":1, "cm²":100, "dm²":10000, "m²":1000000, ha:10000000000, "km²":1000000000000 },
   "Térfogat":  { ml:1, cl:10, dl:100, l:1000, "cm³":1, "dm³":1000, "m³":1000000 },
   "Tömeg":     { mg:1, g:1000, dkg:10000, kg:1000000, t:1000000000 },
   "Idő":       { mp:1, perc:60, "óra":3600, nap:86400 },
 };
+
+
 const SINGLE = {
   "Hosszúság": [["mm","cm"],["cm","dm"],["dm","m"],["m","km"]],
   "Terület":   [["mm²","cm²"],["cm²","dm²"],["dm²","m²"],["m²","ha"],["ha","km²"]],
@@ -220,8 +231,10 @@ const DOUBLE = {
   "Idő":       [["mp","óra"],["perc","nap"]],
 };
 
-// ── Number helpers ────────────────────────────────────────────────────────
-// Display: comma only.  Input: both accepted.
+// ═══════════════════════════════════════════════════════
+//  NUMBER HELPERS
+// ═══════════════════════════════════════════════════════
+
 function niceStr(v) {
   if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
   const r1 = Math.round(v * 10) / 10;
@@ -233,6 +246,8 @@ function niceStr(v) {
 
 function parseInput(s) { return parseFloat(s.trim().replace(",", ".")); }
 
+function randInt(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+
 function shuffle(a) {
   const b = [...a];
   for (let i = b.length-1; i>0; i--) {
@@ -241,7 +256,7 @@ function shuffle(a) {
   return b;
 }
 
-// Mixed time source display: 1.5 óra → "1 óra 30 perc"
+// Mixed time source: 1.5 óra → "1 óra 30 perc"
 const TIME_NEXT = { nap:["óra",24], "óra":["perc",60], perc:["mp",60] };
 function formatTimeSrc(v, unit) {
   const whole = Math.floor(v);
@@ -255,13 +270,16 @@ function formatTimeSrc(v, unit) {
   return whole > 0 ? `${whole} ${unit} ${sub} ${nextUnit}` : `${sub} ${nextUnit}`;
 }
 
-// ── Exercise generation ───────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  CONVERSION EXERCISE GENERATION
+// ═══════════════════════════════════════════════════════
 
-// Integer-answer variant: answer ∈ {1..999}
+const FRACS = [0.5, 0.25, 0.75];
+
 function tryPair(small, large, map, goUp) {
   const from = goUp ? small : large;
   const to   = goUp ? large : small;
-  const factor = map[from] / map[to];   // answer = src * factor
+  const factor = map[from] / map[to];
   for (let i = 0; i < 500; i++) {
     const ans = Math.floor(Math.random()*999)+1;
     const src = ans / factor;
@@ -273,14 +291,12 @@ function tryPair(small, large, map, goUp) {
   return null;
 }
 
-// Decimal-answer variant: answer has .5 / .25 / .75 fractional part
-const FRACS = [0.5, 0.25, 0.75];
 function tryPairDecimal(small, large, map, goUp) {
   const from = goUp ? small : large;
   const to   = goUp ? large : small;
   const factor = map[from] / map[to];
   for (let i = 0; i < 500; i++) {
-    const whole = Math.floor(Math.random() * 100);        // 0..99
+    const whole = Math.floor(Math.random() * 100);
     const frac  = FRACS[Math.floor(Math.random()*3)];
     const ans   = whole + frac;
     if (ans <= 0 || ans > 999) continue;
@@ -289,15 +305,14 @@ function tryPairDecimal(small, large, map, goUp) {
     const srcStr = niceStr(src);
     if (!srcStr) continue;
     const ansStr = niceStr(ans);
-    // ansStr must exist AND contain a comma (i.e. actually decimal)
     if (!ansStr || !ansStr.includes(",")) continue;
     return { srcVal:src, ans:ansStr, from, to };
   }
   return null;
 }
 
-// Weighted category pick: Idő is 1/3 as likely as each other category
-function pickCat(cats) {
+// Idő is 1/3 as likely as each other conversion category
+function pickConvCat(cats) {
   const non = cats.filter(c => c !== "Idő");
   const tw  = 1/3;
   const tot = non.length + (cats.includes("Idő") ? tw : 0);
@@ -306,13 +321,12 @@ function pickCat(cats) {
   return "Idő";
 }
 
-function makeExercise(cats, dj, goUp, wantDecimal) {
+function makeConvExercise(cats, dj, goUp, wantDecimal) {
   const pool    = dj ? DOUBLE : SINGLE;
-  const primary = pickCat(cats);
+  const primary = pickConvCat(cats);
   const rest    = shuffle(cats.filter(c => c !== primary));
-
   for (const cat of [primary, ...rest]) {
-    const map = UNITS[cat];
+    const map = CONV_UNITS[cat];
     for (const [s,l] of shuffle(pool[cat]||[])) {
       const r = wantDecimal
         ? tryPairDecimal(s, l, map, goUp)
@@ -321,43 +335,213 @@ function makeExercise(cats, dj, goUp, wantDecimal) {
       const srcStr = (cat === "Idő")
         ? formatTimeSrc(r.srcVal, r.from)
         : (niceStr(r.srcVal) + " " + r.from);
-      return { srcStr, ans:r.ans, from:r.from, to:r.to, dj, goUp };
+      return { isGeo:false, srcStr, ans:r.ans, to:r.to, qLabel:null, goUp };
     }
   }
-
-  // Fallbacks
-  if (dj)          return makeExercise(cats, false, goUp, wantDecimal);
-  if (wantDecimal) return makeExercise(cats, dj,    goUp, false);   // give up on decimal
-  return             makeExercise(cats, false, !goUp, false);
+  if (dj)          return makeConvExercise(cats, false, goUp, wantDecimal);
+  if (wantDecimal) return makeConvExercise(cats, dj,    goUp, false);
+  return             makeConvExercise(cats, false, !goUp, false);
 }
 
+// ═══════════════════════════════════════════════════════
+//  GEOMETRY EXERCISE GENERATION
+// ═══════════════════════════════════════════════════════
+
+// Each generator returns { shape, given, ans, to, qLabel }
+// shape  = shape name string
+// given  = the given values string
+// ans    = answer as string
+// to     = answer unit
+// qLabel = what to find (T, K, a, b, c)
+
+const GEO_GENS = {
+
+  "Síkterület": shuffle([
+
+    // ── Négyzet ──────────────────────────────────────────
+
+    // T forward: given a, find T = a²
+    () => {
+      const a = randInt(2, 20);
+      return { shape:"Négyzet", given:`a = ${a} cm`, ans:String(a*a), to:"cm²", qLabel:"T" };
+    },
+    // T reverse: given T = a², find a
+    () => {
+      const a = randInt(2, 14);
+      return { shape:"Négyzet", given:`T = ${a*a} cm²`, ans:String(a), to:"cm", qLabel:"a" };
+    },
+
+    // ── Téglalap ─────────────────────────────────────────
+
+    // T forward: given a, b, find T = a×b
+    () => {
+      const a = randInt(2, 15), b = randInt(2, 15);
+      return { shape:"Téglalap", given:`a = ${a} cm,  b = ${b} cm`, ans:String(a*b), to:"cm²", qLabel:"T" };
+    },
+    // T reverse: given T and a, find b
+    () => {
+      const a = randInt(2, 12), b = randInt(2, 12);
+      return { shape:"Téglalap", given:`T = ${a*b} cm²,  a = ${a} cm`, ans:String(b), to:"cm", qLabel:"b" };
+    },
+    // T reverse: given T and b, find a  (same formula, different label)
+    () => {
+      const a = randInt(2, 12), b = randInt(2, 12);
+      return { shape:"Téglalap", given:`T = ${a*b} cm²,  b = ${b} cm`, ans:String(a), to:"cm", qLabel:"a" };
+    },
+
+  ]),
+
+  "Kerület": shuffle([
+
+    // ── Négyzet ──────────────────────────────────────────
+
+    // K forward: given a, find K = 4a
+    () => {
+      const a = randInt(2, 20);
+      return { shape:"Négyzet", given:`a = ${a} cm`, ans:String(4*a), to:"cm", qLabel:"K" };
+    },
+    // K reverse: given K, find a
+    () => {
+      const a = randInt(2, 15);
+      return { shape:"Négyzet", given:`K = ${4*a} cm`, ans:String(a), to:"cm", qLabel:"a" };
+    },
+
+    // ── Téglalap ─────────────────────────────────────────
+
+    // K forward: given a, b, find K = 2(a+b)
+    () => {
+      const a = randInt(2, 15), b = randInt(2, 15);
+      return { shape:"Téglalap", given:`a = ${a} cm,  b = ${b} cm`, ans:String(2*(a+b)), to:"cm", qLabel:"K" };
+    },
+    // K reverse: given K and a, find b
+    () => {
+      const a = randInt(2, 12), b = randInt(2, 12);
+      return { shape:"Téglalap", given:`K = ${2*(a+b)} cm,  a = ${a} cm`, ans:String(b), to:"cm", qLabel:"b" };
+    },
+    // K reverse: given K and b, find a
+    () => {
+      const a = randInt(2, 12), b = randInt(2, 12);
+      return { shape:"Téglalap", given:`K = ${2*(a+b)} cm,  b = ${b} cm`, ans:String(a), to:"cm", qLabel:"a" };
+    },
+
+    // ── Egyenlő oldalú háromszög ──────────────────────────
+
+    // K forward: given a, find K = 3a
+    () => {
+      const a = randInt(2, 20);
+      return { shape:"Egyenlő oldalú △", given:`a = ${a} cm`, ans:String(3*a), to:"cm", qLabel:"K" };
+    },
+    // K reverse: given K, find a
+    () => {
+      const a = randInt(2, 15);
+      return { shape:"Egyenlő oldalú △", given:`K = ${3*a} cm`, ans:String(a), to:"cm", qLabel:"a" };
+    },
+
+    // ── Egyenlő szárú háromszög ───────────────────────────
+    // a = leg (szár), b = base (alap);  K = 2a + b
+    // triangle inequality: b < 2a  (and b > 0, guaranteed)
+
+    // K forward: given a, b, find K = 2a+b
+    () => {
+      const a = randInt(3, 15);
+      const b = randInt(2, 2*a - 1);
+      return { shape:"Egyenlő szárú △", given:`a = ${a} cm (szár),  b = ${b} cm (alap)`, ans:String(2*a+b), to:"cm", qLabel:"K" };
+    },
+    // K reverse: given K and a, find b
+    () => {
+      const a = randInt(3, 12);
+      const b = randInt(2, 2*a - 1);
+      return { shape:"Egyenlő szárú △", given:`K = ${2*a+b} cm,  a = ${a} cm (szár)`, ans:String(b), to:"cm", qLabel:"b (alap)" };
+    },
+    // K reverse: given K and b, find a
+    () => {
+      const a = randInt(3, 12);
+      const b = randInt(2, 2*a - 1);
+      return { shape:"Egyenlő szárú △", given:`K = ${2*a+b} cm,  b = ${b} cm (alap)`, ans:String(a), to:"cm", qLabel:"a (szár)" };
+    },
+
+    // ── Általános háromszög ───────────────────────────────
+    // All three sides different, triangle inequality guaranteed
+
+    // K forward: given a, b, c, find K
+    () => {
+      let a, b, c, tries = 0;
+      do {
+        a = randInt(2,14); b = randInt(2,14); c = randInt(2,14); tries++;
+      } while ((a===b || b===c || a===c || a+b<=c || a+c<=b || b+c<=a) && tries<200);
+      return { shape:"Háromszög", given:`a = ${a} cm,  b = ${b} cm,  c = ${c} cm`, ans:String(a+b+c), to:"cm", qLabel:"K" };
+    },
+    // K reverse: given K, a, b; find c
+    () => {
+      let a, b, c, tries = 0;
+      do {
+        a = randInt(2,12); b = randInt(2,12); c = randInt(2,12); tries++;
+      } while ((a===b || b===c || a===c || a+b<=c || a+c<=b || b+c<=a) && tries<200);
+      return { shape:"Háromszög", given:`K = ${a+b+c} cm,  a = ${a} cm,  b = ${b} cm`, ans:String(c), to:"cm", qLabel:"c" };
+    },
+
+  ]),
+};
+
+function makeGeoExercise(cat) {
+  const gens = GEO_GENS[cat];
+  const ex   = gens[Math.floor(Math.random() * gens.length)]();
+  return { isGeo:true, cat, ...ex };
+}
+
+// ═══════════════════════════════════════════════════════
+//  QUIZ BUILDER
+// ═══════════════════════════════════════════════════════
+
+const GEO_CAT_NAMES = new Set(["Kerület", "Síkterület"]);
+
 function buildQuiz(cats) {
-  return Array.from({length:20}, (_,i) => {
+  const convCats = cats.filter(c => !GEO_CAT_NAMES.has(c));
+  const geoCats  = cats.filter(c =>  GEO_CAT_NAMES.has(c));
+
+  return Array.from({length:20}, () => {
+    // Decide geo vs conversion, proportional to number of active categories each side
+    const useGeo = geoCats.length > 0 &&
+      (convCats.length === 0 || Math.random() < geoCats.length / cats.length);
+
+    if (useGeo) {
+      const cat = geoCats[Math.floor(Math.random() * geoCats.length)];
+      return makeGeoExercise(cat);
+    }
     const dj          = Math.random() < 0.15;
     const goUp        = Math.random() < 0.5;
     const wantDecimal = Math.random() < 0.15;
-    return makeExercise(cats, dj, goUp, wantDecimal);
+    return makeConvExercise(convCats, dj, goUp, wantDecimal);
   });
 }
 
-// ── State ─────────────────────────────────────────────────────────────────
-const ALL_CATS = Object.keys(UNITS);
+// ═══════════════════════════════════════════════════════
+//  STATE & SETTINGS
+// ═══════════════════════════════════════════════════════
+
+const ALL_CATS = ["Hosszúság", "Terület", "Térfogat", "Tömeg", "Idő", "Kerület", "Síkterület"];
 let activeCats = new Set(ALL_CATS);
 let exercises=[], qIdx=0, score=0, answered=false;
 const AUTO_MS = 700;
 
-// ── Settings ──────────────────────────────────────────────────────────────
 function renderCats() {
   const list = document.getElementById("cat-list");
   list.innerHTML = "";
-  for (const cat of ALL_CATS) {
+  // Separator before geometry categories
+  ALL_CATS.forEach((cat, i) => {
+    if (i === 5) {
+      const sep = document.createElement("div");
+      sep.style.cssText = "font-size:12px;color:var(--muted);padding:4px 2px 2px;letter-spacing:.05em;text-transform:uppercase";
+      sep.textContent = "Síkidomok";
+      list.appendChild(sep);
+    }
     const on = activeCats.has(cat);
     const b  = document.createElement("button");
     b.className = "cat-btn"+(on?" on":"");
     b.innerHTML = `<span>${cat}</span>${on?'<span>✓</span>':''}`;
     b.onclick   = () => toggleCat(cat);
     list.appendChild(b);
-  }
+  });
   document.getElementById("start-btn").disabled = activeCats.size===0;
 }
 
@@ -367,13 +551,19 @@ function toggleCat(cat) {
   renderCats();
 }
 
-// ── Screens ───────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════════════
+
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById("screen-"+id).classList.add("active");
 }
 
-// ── Quiz ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  QUIZ FLOW
+// ═══════════════════════════════════════════════════════
+
 function startQuiz() {
   exercises = buildQuiz([...activeCats]);
   qIdx=0; score=0;
@@ -384,11 +574,26 @@ function startQuiz() {
 function renderQ() {
   answered = false;
   const ex  = exercises[qIdx];
+
   document.getElementById("prog-fill").style.width  = (qIdx/20*100)+"%";
   document.getElementById("prog-label").textContent = (qIdx+1)+"/20";
-  document.getElementById("q-source").textContent   = ex.srcStr;
-  document.getElementById("q-arrow").textContent    = ex.goUp ? "↑" : "↓";
-  document.getElementById("q-target").textContent   = "= _______ "+ex.to;
+
+  const srcArea = document.getElementById("q-source-area");
+  const arrow   = document.getElementById("q-arrow");
+  const target  = document.getElementById("q-target");
+
+  if (ex.isGeo) {
+    srcArea.innerHTML =
+      `<div class="geo-shape">${ex.shape}</div>` +
+      `<div class="geo-given">${ex.given}</div>`;
+    arrow.textContent  = "→";
+    target.textContent = `${ex.qLabel} = _______ ${ex.to}`;
+  } else {
+    srcArea.innerHTML  = `<div class="q-source">${ex.srcStr}</div>`;
+    arrow.textContent  = ex.goUp ? "↑" : "↓";
+    target.textContent = `= _______ ${ex.to}`;
+  }
+
   const inp = document.getElementById("answer-input");
   inp.value = "";
   document.getElementById("input-row").style.display  = "";
@@ -407,7 +612,7 @@ function submitAnswer() {
 
   const ex  = exercises[qIdx];
   const uv  = parseInput(raw);
-  const cv  = parseInput(ex.ans);          // ex.ans may be "1,5" or "90"
+  const cv  = parseInput(ex.ans);
   const ok  = isFinite(uv) && Math.abs(uv - cv) < 1e-9;
   if (ok) score++;
 
@@ -449,7 +654,7 @@ function handleKey(e) {
   if (e.key==="Enter" && !answered) submitAnswer();
 }
 
-// ── Virtual keyboard detection ────────────────────────────────────────────
+// ── Virtual keyboard detection ────────────────────────
 if (window.visualViewport) {
   const check = () =>
     document.body.classList.toggle("kb",
@@ -458,7 +663,6 @@ if (window.visualViewport) {
   check();
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────
 renderCats();
 </script>
 <script data-goatcounter="https://huvagoc.goatcounter.com/count"
